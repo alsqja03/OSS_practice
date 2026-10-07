@@ -132,8 +132,9 @@ def login_buttons():
                 st.experimental_rerun()
         else:
             if st.button("회원가입/로그인", key="login"):
-                login_page()
-                st.stop()
+                # 페이지 전환을 위해 세션 변수 설정 후 바로 재실행
+                st.session_state.page = "login"
+                st.experimental_rerun()
 
 # ======== 로그인 & 회원가입 페이지 ========
 def login_page():
