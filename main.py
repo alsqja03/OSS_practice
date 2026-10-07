@@ -106,31 +106,36 @@ def get_chats(item_id):
         """, (item_id,))
     return cursor.fetchall()
 
-# ======== 사이드바 메뉴 생성 ========
+# ======== 사이드바 메뉴 생성 및 이미지 수정 ========
 def sidebar_menu():
     st.sidebar.title("PKNU FINDER")
     menu = st.sidebar.radio("", ["홈", "분실물 등록", "채팅", "마이페이지"])
     st.sidebar.markdown(
-        "<div style='position:absolute; bottom:10px; width:85%;'>"
-        "<img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' alt='부경대학교 로고' style='width:100%; max-width:150px;'/>"
-        "</div>", unsafe_allow_html=True)
+        """
+        <div style='position:fixed; bottom:20px; width:80%; max-width:150px;'>
+            <img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' 
+                 alt='부경대학교 로고' style='width:100%; height:auto;'/>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
     return menu
 
-# ======== 상단 로그인/로그아웃 버튼 ========
+# ======== 로그인 / 로그아웃 버튼 (크기 조정) ========
 def login_buttons():
-    cols = st.columns([9,1])
+    cols = st.columns([8, 2])
     with cols[1]:
         if st.session_state.login:
-            if st.button("로그아웃"):
+            if st.button("로그아웃", key="logout"):
                 st.session_state.login = False
                 st.session_state.user_id = None
                 st.experimental_rerun()
         else:
-            if st.button("회원가입/로그인"):
+            if st.button("회원가입/로그인", key="login"):
                 login_page()
                 st.stop()
 
-# ======== 로그인 및 회원가입 페이지 ========
+# ======== 로그인 & 회원가입 페이지 ========
 def login_page():
     st.title("회원가입 / 로그인")
     tab = st.radio("선택하세요:", ["로그인", "회원가입"])
@@ -157,28 +162,32 @@ def login_page():
             else:
                 st.error("아이디 또는 비밀번호가 일치하지 않습니다.")
 
-# ======== 홈 화면 ========
+# ======== 홈 페이지 ========
 def home_page():
     st.title("PKNU FINDER에 오신 것을 환영합니다!")
     st.write("분실물을 검색하고, 주인을 찾아주세요.")
 
     keyword = st.text_input("물건 이름, 장소, 키워드를 입력하세요.", st.session_state.keyword)
     if st.button("검색"):
-        st.session_state.keyword = keyword
+        st.session_state.keyword = keyword.strip()
         st.experimental_rerun()
 
     recent_items = get_recent_lost_items()
+
     st.subheader("최근 등록된 분실물")
-    cols = st.columns(len(recent_items))
-    for idx, item in enumerate(recent_items):
-        with cols[idx]:
-            st.image("https://via.placeholder.com/150", width=120)
-            st.write(f"**{item[1]}**")
-            st.write(item[2])
-            st.write(item[3])
-            if st.button(f"상세보기-{item[0]}"):
-                st.session_state.selected_item = item[0]
-                st.experimental_rerun()
+    if recent_items:
+        cols = st.columns(len(recent_items))
+        for idx, item in enumerate(recent_items):
+            with cols[idx]:
+                st.image("https://via.placeholder.com/150", width=120)
+                st.write(f"**{item[1]}**")
+                st.write(item[2])
+                st.write(item[3])
+                if st.button(f"상세보기-{item[0]}"):
+                    st.session_state.selected_item = item[0]
+                    st.experimental_rerun()
+    else:
+        st.info("현재 등록된 분실물이 없습니다.")
 
     if st.button("전체보기"):
         st.session_state.keyword = ""
@@ -204,11 +213,15 @@ def lost_items_page():
     st.title("전체 분실물 목록")
     cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC")
     items = cursor.fetchall()
-    for item in items:
-        st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
-        if st.button(f"상세보기-{item[0]}"):
-            st.session_state.selected_item = item[0]
-            st.experimental_rerun()
+
+    if items:
+        for item in items:
+            st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
+            if st.button(f"상세보기-{item[0]}"):
+                st.session_state.selected_item = item[0]
+                st.experimental_rerun()
+    else:
+        st.info("현재 등록된 분실물이 없습니다.")
 
 # ======== 분실물 상세 페이지 ========
 def lost_detail_page():
@@ -296,13 +309,13 @@ def mypage():
     user = cursor.fetchone()
     st.write(f"환영합니다, {user[0]}님!")
 
-# ======== 메인 ========
+# ======== 메인 함수 ========
 def main():
     menu = sidebar_menu()
     login_buttons()
 
     if menu == "홈":
-        if st.session_state.keyword != "":
+        if st.session_state.keyword:
             search_page()
         else:
             home_page()
@@ -313,7 +326,6 @@ def main():
     elif menu == "마이페이지":
         mypage()
 
-    # 상세페이지가 선택된 상태면 항상 띄움
     if st.session_state.selected_item is not None:
         lost_detail_page()
 
