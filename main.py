@@ -1,5 +1,3 @@
-# main.py
-
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -47,10 +45,14 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = None
 if "keyword" not in st.session_state:
     st.session_state.keyword = ""
+if "page" not in st.session_state:
+    st.session_state.page = "home"
+if "selected_item" not in st.session_state:
+    st.session_state.selected_item = None
 
-# ======== 비밀번호 해싱 함수 ========
-def hash_password(pw: str):
-    return hashlib.sha256(pw.encode()).hexdigest()
+# ======== 비밀번호 해싱 함수 (sha256) ========
+def hash_password(password: str):
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
 # ======== 유저 로그인 체크 ========
 def check_login(username, password):
@@ -104,7 +106,7 @@ def get_chats(item_id):
         """, (item_id,))
     return cursor.fetchall()
 
-# ======== UI ========
+# ======== 사이드바 메뉴 생성 ========
 def sidebar_menu():
     st.sidebar.title("PKNU FINDER")
     menu = st.sidebar.radio("", ["홈", "분실물 등록", "채팅", "마이페이지"])
@@ -114,6 +116,7 @@ def sidebar_menu():
         "</div>", unsafe_allow_html=True)
     return menu
 
+# ======== 상단 로그인/로그아웃 버튼 ========
 def login_buttons():
     cols = st.columns([9,1])
     with cols[1]:
@@ -127,11 +130,10 @@ def login_buttons():
                 login_page()
                 st.stop()
 
+# ======== 로그인 및 회원가입 페이지 ========
 def login_page():
     st.title("회원가입 / 로그인")
-
-    tab = st.radio("선택하세요", ["로그인", "회원가입"])
-
+    tab = st.radio("선택하세요:", ["로그인", "회원가입"])
     username = st.text_input("아이디")
     password = st.text_input("비밀번호", type="password")
 
@@ -144,7 +146,7 @@ def login_page():
                     st.success("회원가입 성공! 로그인 해주세요.")
                 else:
                     st.error("이미 존재하는 아이디입니다.")
-    else:  # 로그인
+    else:
         if st.button("로그인"):
             user_id = check_login(username, password)
             if user_id:
@@ -155,6 +157,7 @@ def login_page():
             else:
                 st.error("아이디 또는 비밀번호가 일치하지 않습니다.")
 
+# ======== 홈 화면 ========
 def home_page():
     st.title("PKNU FINDER에 오신 것을 환영합니다!")
     st.write("분실물을 검색하고, 주인을 찾아주세요.")
@@ -162,7 +165,7 @@ def home_page():
     keyword = st.text_input("물건 이름, 장소, 키워드를 입력하세요.", st.session_state.keyword)
     if st.button("검색"):
         st.session_state.keyword = keyword
-        st.experimental_rerun()  # 새로고침하여 검색페이지로 이동
+        st.experimental_rerun()
 
     recent_items = get_recent_lost_items()
     st.subheader("최근 등록된 분실물")
@@ -182,6 +185,7 @@ def home_page():
         st.session_state.page = "lost_items"
         st.experimental_rerun()
 
+# ======== 검색 결과 페이지 ========
 def search_page():
     keyword = st.session_state.keyword
     st.title(f'"{keyword}" 검색 결과')
@@ -195,6 +199,7 @@ def search_page():
             st.session_state.selected_item = item[0]
             st.experimental_rerun()
 
+# ======== 분실물 전체보기 페이지 ========
 def lost_items_page():
     st.title("전체 분실물 목록")
     cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC")
@@ -205,8 +210,9 @@ def lost_items_page():
             st.session_state.selected_item = item[0]
             st.experimental_rerun()
 
+# ======== 분실물 상세 페이지 ========
 def lost_detail_page():
-    item_id = st.session_state.get("selected_item")
+    item_id = st.session_state.selected_item
     if not item_id:
         st.warning("잘못된 접근입니다.")
         return
@@ -230,6 +236,7 @@ def lost_detail_page():
             login_page()
             st.stop()
 
+# ======== 분실물 등록 페이지 ========
 def lost_registration_page():
     st.title("분실물 등록")
     if not st.session_state.login:
@@ -251,6 +258,7 @@ def lost_registration_page():
         st.success("분실물이 등록되었습니다!")
         st.experimental_rerun()
 
+# ======== 채팅 페이지 ========
 def chat_page():
     if not st.session_state.login:
         st.info("채팅 사용을 위해 로그인하세요.")
@@ -259,7 +267,7 @@ def chat_page():
             st.stop()
         return
 
-    item_id = st.session_state.get("selected_item")
+    item_id = st.session_state.selected_item
     if not item_id:
         st.info("채팅할 분실물을 선택하세요.")
         return
@@ -274,6 +282,7 @@ def chat_page():
         save_chat(item_id, st.session_state.user_id, msg.strip())
         st.experimental_rerun()
 
+# ======== 마이페이지 ========
 def mypage():
     if not st.session_state.login:
         st.info("마이페이지 사용을 위해 로그인하세요.")
@@ -292,12 +301,6 @@ def main():
     menu = sidebar_menu()
     login_buttons()
 
-    # 페이지 상태 관리 (기본은 홈)
-    if "page" not in st.session_state:
-        st.session_state.page = "home"
-    if "selected_item" not in st.session_state:
-        st.session_state.selected_item = None
-
     if menu == "홈":
         if st.session_state.keyword != "":
             search_page()
@@ -310,8 +313,8 @@ def main():
     elif menu == "마이페이지":
         mypage()
 
-    # 상세페이지는 검색 결과 버튼 클릭 시 page 변경
-    if st.session_state.selected_item:
+    # 상세페이지가 선택된 상태면 항상 띄움
+    if st.session_state.selected_item is not None:
         lost_detail_page()
 
 if __name__ == "__main__":
