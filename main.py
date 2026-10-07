@@ -113,7 +113,7 @@ def sidebar_menu():
     st.sidebar.markdown(
         """
         <div style='position:fixed; bottom:20px; width:80%; max-width:150px;'>
-            <img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' 
+            <img src='pknulogo.png' 
                  alt='부경대학교 로고' style='width:100%; height:auto;'/>
         </div>
         """, 
