@@ -1,6 +1,46 @@
-import streamlit as st
+# main.py
 
-# === 유저 로그인 상태 관리 간단 구현 ===
+import streamlit as st
+import sqlite3
+from datetime import datetime
+import hashlib
+
+# ======== DB 초기화 및 연결 ========
+def init_db():
+    conn = sqlite3.connect("pkunfinder.db", check_same_thread=False)
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )""")
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS lost_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        location TEXT,
+        lost_date TEXT,
+        user_id INTEGER,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )""")
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS chats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        message TEXT NOT NULL,
+        timestamp TEXT,
+        FOREIGN KEY(item_id) REFERENCES lost_items(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )""")
+    conn.commit()
+    return conn
+
+conn = init_db()
+cursor = conn.cursor()
+
+# ======== 유저 로그인 상태 관리 ========
 if "login" not in st.session_state:
     st.session_state.login = False
 if "user_id" not in st.session_state:
@@ -8,30 +48,75 @@ if "user_id" not in st.session_state:
 if "keyword" not in st.session_state:
     st.session_state.keyword = ""
 
-# === 사이드바 메뉴 리스트 ===
-menu_list = ["홈", "분실물 등록", "채팅", "마이페이지"]
+# ======== 비밀번호 해싱 함수 ========
+def hash_password(pw: str):
+    return hashlib.sha256(pw.encode()).hexdigest()
 
-def main():
-    # 사이드바 구성
-    with st.sidebar:
-        st.markdown(
-            """
-            <h1 style="font-weight:bold;">PKNU FINDER</h1>
-            """,
-            unsafe_allow_html=True,
-        )
+# ======== 유저 로그인 체크 ========
+def check_login(username, password):
+    hashed_pw = hash_password(password)
+    cursor.execute("SELECT id FROM users WHERE username=? AND password=?", (username, hashed_pw))
+    user = cursor.fetchone()
+    if user:
+        return user[0]
+    return None
 
-        # 메뉴 선택
-        menu_choice = st.radio("", menu_list)
+# ======== 회원가입 함수 ========
+def create_user(username, password):
+    hashed_pw = hash_password(password)
+    try:
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-        # 하단 부경대학교 로고 (임시 텍스트 대신 이미지 사용 가능)
-        st.markdown("<div style='position:absolute; bottom:20px; width:90%;'>"
-                    "<img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' alt='부경대학교 로고' style='width:100%; max-width:150px;'/></div>",
-                    unsafe_allow_html=True)
+# ======== 분실물 저장 ========
+def save_lost_item(name, location, lost_date, user_id):
+    cursor.execute("INSERT INTO lost_items (name, location, lost_date, user_id) VALUES (?, ?, ?, ?)",
+                   (name, location, lost_date, user_id))
+    conn.commit()
 
-    # 상단 우측에 로그인/회원가입 또는 로그아웃 버튼 배치
-    login_col1, login_col2 = st.columns([9, 1])
-    with login_col2:
+# ======== 검색 기능 ========
+def search_lost_items(keyword):
+    keyword_like = f"%{keyword}%"
+    cursor.execute("SELECT id, name, location, lost_date FROM lost_items WHERE name LIKE ? ORDER BY lost_date DESC", (keyword_like,))
+    return cursor.fetchall()
+
+# ======== 최근 등록 분실물 조회 ========
+def get_recent_lost_items(limit=3):
+    cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC LIMIT ?", (limit,))
+    return cursor.fetchall()
+
+# ======== 채팅 저장 ========
+def save_chat(item_id, user_id, message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("INSERT INTO chats (item_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)", (item_id, user_id, message, timestamp))
+    conn.commit()
+
+# ======== 채팅 불러오기 ========
+def get_chats(item_id):
+    cursor.execute("""
+        SELECT users.username, chats.message, chats.timestamp
+        FROM chats JOIN users ON chats.user_id = users.id
+        WHERE item_id=?
+        ORDER BY timestamp ASC
+        """, (item_id,))
+    return cursor.fetchall()
+
+# ======== UI ========
+def sidebar_menu():
+    st.sidebar.title("PKNU FINDER")
+    menu = st.sidebar.radio("", ["홈", "분실물 등록", "채팅", "마이페이지"])
+    st.sidebar.markdown(
+        "<div style='position:absolute; bottom:10px; width:85%;'>"
+        "<img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' alt='부경대학교 로고' style='width:100%; max-width:150px;'/>"
+        "</div>", unsafe_allow_html=True)
+    return menu
+
+def login_buttons():
+    cols = st.columns([9,1])
+    with cols[1]:
         if st.session_state.login:
             if st.button("로그아웃"):
                 st.session_state.login = False
@@ -39,169 +124,195 @@ def main():
                 st.experimental_rerun()
         else:
             if st.button("회원가입/로그인"):
-                # 회원가입/로그인 페이지 (본 예제는 간단히 로그인만 구현)
                 login_page()
-                return
+                st.stop()
 
-    # 메뉴별 화면 이동
-    if menu_choice == "홈":
-        home_page()
-    elif menu_choice == "분실물 등록":
-        if not st.session_state.login:
-            login_page()
-        else:
-            lost_registration_page()
-    elif menu_choice == "채팅":
-        if not st.session_state.login:
-            login_page()
-        else:
-            chat_page()
-    elif menu_choice == "마이페이지":
-        if not st.session_state.login:
-            login_page()
-        else:
-            mypage()
+def login_page():
+    st.title("회원가입 / 로그인")
 
-# 메인 화면 (홈)
+    tab = st.radio("선택하세요", ["로그인", "회원가입"])
+
+    username = st.text_input("아이디")
+    password = st.text_input("비밀번호", type="password")
+
+    if tab == "회원가입":
+        if st.button("회원가입"):
+            if not username or not password:
+                st.warning("아이디와 비밀번호를 모두 입력하세요.")
+            else:
+                if create_user(username, password):
+                    st.success("회원가입 성공! 로그인 해주세요.")
+                else:
+                    st.error("이미 존재하는 아이디입니다.")
+    else:  # 로그인
+        if st.button("로그인"):
+            user_id = check_login(username, password)
+            if user_id:
+                st.session_state.login = True
+                st.session_state.user_id = user_id
+                st.success(f"{username}님, 환영합니다!")
+                st.experimental_rerun()
+            else:
+                st.error("아이디 또는 비밀번호가 일치하지 않습니다.")
+
 def home_page():
     st.title("PKNU FINDER에 오신 것을 환영합니다!")
     st.write("분실물을 검색하고, 주인을 찾아주세요.")
 
-    # 검색창 (키워드 유지)
     keyword = st.text_input("물건 이름, 장소, 키워드를 입력하세요.", st.session_state.keyword)
     if st.button("검색"):
         st.session_state.keyword = keyword
-        search_page(keyword)
+        st.experimental_rerun()  # 새로고침하여 검색페이지로 이동
 
-    # 최근 등록된 분실물 예시 (더미 데이터)
-    st.subheader("최근 등록된 분실물들")
-    recent_items = [
-        {"name": "검은색 카드지갑", "location": "중앙도서관", "date": "2026.09.28"},
-        {"name": "에어팟 (1세대)", "location": "학생회관", "date": "2026.09.27"},
-        {"name": "검은색 우산", "location": "공학관", "date": "2026.09.26"},
-    ]
-
+    recent_items = get_recent_lost_items()
+    st.subheader("최근 등록된 분실물")
     cols = st.columns(len(recent_items))
     for idx, item in enumerate(recent_items):
         with cols[idx]:
-            st.image("https://via.placeholder.com/150", width=120)  # 임시 이미지
-            st.write(f"**{item['name']}**")
-            st.write(item["location"])
-            st.write(item["date"])
+            st.image("https://via.placeholder.com/150", width=120)
+            st.write(f"**{item[1]}**")
+            st.write(item[2])
+            st.write(item[3])
+            if st.button(f"상세보기-{item[0]}"):
+                st.session_state.selected_item = item[0]
+                st.experimental_rerun()
 
     if st.button("전체보기"):
         st.session_state.keyword = ""
-        lost_items_page()
+        st.session_state.page = "lost_items"
+        st.experimental_rerun()
 
-# 검색 결과 페이지
-def search_page(keyword):
-    st.title(f'검색 결과 : "{keyword}"')
-    # 예시 검색 결과 (더미 데이터)
-    # 실제 DB나 API 적용시 여기서 데이터 필터링 후 보여주면 됨.
-    search_results = [
-        {"name": "검은색 카드지갑", "location": "중앙도서관", "date": "2026.09.28"},
-        {"name": "갈색 반지갑", "location": "학생회관", "date": "2026.09.27"},
-        {"name": "네이비 지갑", "location": "공학관", "date": "2026.09.25"},
-        {"name": "검정 카드지갑 (로고 있음)", "location": "도서관 앞", "date": "2026.09.24"},
-        {"name": "초록색 지갑", "location": "기숙사 앞", "date": "2026.09.22"},
-    ]
-
-    filtered_results = [res for res in search_results if keyword.lower() in res["name"].lower()]
-    if not filtered_results:
-        st.write("검색 결과가 없습니다.")
+def search_page():
+    keyword = st.session_state.keyword
+    st.title(f'"{keyword}" 검색 결과')
+    results = search_lost_items(keyword)
+    if not results:
+        st.info("검색 결과가 없습니다.")
         return
+    for item in results:
+        st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
+        if st.button(f"상세보기-{item[0]}"):
+            st.session_state.selected_item = item[0]
+            st.experimental_rerun()
 
-    for item in filtered_results:
-        st.write(f"**{item['name']}**  -  {item['location']}  -  {item['date']}  ")
-        if st.button(f"상세보기 - {item['name']}"):
-            lost_detail_page(item)
-            return
-
-# 분실물 전체보기 페이지
 def lost_items_page():
     st.title("전체 분실물 목록")
-    # 실제 데이터 대체 필요
-    items = [
-        {"name": "검은색 카드지갑", "location": "중앙도서관", "date": "2026.09.28"},
-        {"name": "에어팟 (1세대)", "location": "학생회관", "date": "2026.09.27"},
-        {"name": "검은색 우산", "location": "공학관", "date": "2026.09.26"},
-        # 추가 분실물...
-    ]
+    cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC")
+    items = cursor.fetchall()
     for item in items:
-        st.write(f"**{item['name']}**  -  {item['location']}  -  {item['date']}")
-        if st.button(f"상세보기 - {item['name']}"):
-            lost_detail_page(item)
-            return
+        st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
+        if st.button(f"상세보기-{item[0]}"):
+            st.session_state.selected_item = item[0]
+            st.experimental_rerun()
 
-# 분실물 상세 페이지
-def lost_detail_page(item):
-    st.title(item["name"])
-    st.write(f"분실 위치: {item['location']}")
-    st.write(f"등록일: {item['date']}")
-    st.image("https://via.placeholder.com/300")  # 이미지 자리
+def lost_detail_page():
+    item_id = st.session_state.get("selected_item")
+    if not item_id:
+        st.warning("잘못된 접근입니다.")
+        return
+    cursor.execute("SELECT name, location, lost_date FROM lost_items WHERE id=?", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        st.warning("분실물 정보를 찾을 수 없습니다.")
+        return
+    st.title(item[0])
+    st.write(f"분실 위치: {item[1]}")
+    st.write(f"등록일: {item[2]}")
+    st.image("https://via.placeholder.com/300")
 
-    if st.button("채팅하기"):
-        if not st.session_state.login:
+    if st.session_state.login:
+        if st.button("채팅하기"):
+            st.session_state.page = "chat"
+            st.experimental_rerun()
+    else:
+        st.info("채팅 기능 사용하려면 로그인하세요.")
+        if st.button("로그인"):
             login_page()
-        else:
-            chat_with_item(item)
+            st.stop()
 
-# 분실물 등록 페이지
 def lost_registration_page():
     st.title("분실물 등록")
+    if not st.session_state.login:
+        st.info("분실물 등록을 위해 로그인하세요.")
+        if st.button("로그인"):
+            login_page()
+            st.stop()
+        return
 
     name = st.text_input("물건 이름")
     location = st.text_input("분실 위치")
-    date = st.date_input("분실 날짜")
-    register_btn = st.button("등록")
+    lost_date = st.date_input("분실 날짜")
 
-    if register_btn:
-        # 실제 등록 DB or API 호출 부분
+    if st.button("등록"):
+        if not name or not location:
+            st.warning("모든 항목을 입력하세요.")
+            return
+        save_lost_item(name, location, lost_date.strftime("%Y-%m-%d"), st.session_state.user_id)
         st.success("분실물이 등록되었습니다!")
         st.experimental_rerun()
 
-# 채팅 리스트 페이지 (간략)
 def chat_page():
-    st.title("내 채팅 리스트")
-    # 예시 데이터 (실제 데이터 연결 필요)
-    chats = [
-        {"with": "검은색 카드지갑", "last_msg": "연락주세요", "date": "2026.09.28"},
-        # 추가 채팅방...
-    ]
+    if not st.session_state.login:
+        st.info("채팅 사용을 위해 로그인하세요.")
+        if st.button("로그인"):
+            login_page()
+            st.stop()
+        return
 
-    for c in chats:
-        st.write(f"{c['with']} - {c['last_msg']} ({c['date']})")
-        if st.button(f"{c['with']} 채팅방 입장"):
-            chat_with_item({"name": c["with"]})
-            return
+    item_id = st.session_state.get("selected_item")
+    if not item_id:
+        st.info("채팅할 분실물을 선택하세요.")
+        return
 
-# 채팅 화면 예시
-def chat_with_item(item):
-    st.title(f"{item['name']} 와의 채팅")
-    # 대화창, 메시징 등은 실제 구현 필요 (여기선 최소 UI만)
-    chat_input = st.text_input("메시지 입력...")
-    if st.button("보내기"):
-        st.success("메시지가 전송되었습니다.")
+    st.title("채팅")
+    chats = get_chats(item_id)
+    for username, message, timestamp in chats:
+        st.markdown(f"**{username}**  ({timestamp}): {message}")
 
-# 마이페이지
+    msg = st.text_input("메시지 입력")
+    if st.button("전송") and msg.strip():
+        save_chat(item_id, st.session_state.user_id, msg.strip())
+        st.experimental_rerun()
+
 def mypage():
-    st.title("마이페이지")
-    st.write(f"환영합니다, {st.session_state.user_id}님!")
+    if not st.session_state.login:
+        st.info("마이페이지 사용을 위해 로그인하세요.")
+        if st.button("로그인"):
+            login_page()
+            st.stop()
+        return
 
-# 로그인 페이지 (간단 구현)
-def login_page():
-    st.title("로그인")
-    user = st.text_input("아이디")
-    pwd = st.text_input("비밀번호", type="password")
-    if st.button("로그인"):
-        # 간단 로그인 예제, 실제는 DB 연동 필요
-        if user == "user" and pwd == "1234":
-            st.session_state.login = True
-            st.session_state.user_id = user
-            st.success("로그인 성공!")
-            st.experimental_rerun()
+    st.title("마이페이지")
+    cursor.execute("SELECT username FROM users WHERE id=?", (st.session_state.user_id,))
+    user = cursor.fetchone()
+    st.write(f"환영합니다, {user[0]}님!")
+
+# ======== 메인 ========
+def main():
+    menu = sidebar_menu()
+    login_buttons()
+
+    # 페이지 상태 관리 (기본은 홈)
+    if "page" not in st.session_state:
+        st.session_state.page = "home"
+    if "selected_item" not in st.session_state:
+        st.session_state.selected_item = None
+
+    if menu == "홈":
+        if st.session_state.keyword != "":
+            search_page()
         else:
-            st.error("아이디 또는 비밀번호가 잘못되었습니다.")
+            home_page()
+    elif menu == "분실물 등록":
+        lost_registration_page()
+    elif menu == "채팅":
+        chat_page()
+    elif menu == "마이페이지":
+        mypage()
+
+    # 상세페이지는 검색 결과 버튼 클릭 시 page 변경
+    if st.session_state.selected_item:
+        lost_detail_page()
 
 if __name__ == "__main__":
     main()
