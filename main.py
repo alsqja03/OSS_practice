@@ -38,7 +38,7 @@ def init_db():
 conn = init_db()
 cursor = conn.cursor()
 
-# ======== 유저 로그인 상태 관리 ========
+# ======== 세션 상태 초기화 ========
 if "login" not in st.session_state:
     st.session_state.login = False
 if "user_id" not in st.session_state:
@@ -50,82 +50,100 @@ if "page" not in st.session_state:
 if "selected_item" not in st.session_state:
     st.session_state.selected_item = None
 
-# ======== 비밀번호 해싱 함수 (sha256) ========
+# ======== 비밀번호 해싱 함수 ========
 def hash_password(password: str):
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
-
-# ======== 유저 로그인 체크 ========
-def check_login(username, password):
-    hashed_pw = hash_password(password)
-    cursor.execute("SELECT id FROM users WHERE username=? AND password=?", (username, hashed_pw))
-    user = cursor.fetchone()
-    if user:
-        return user[0]
-    return None
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 # ======== 회원가입 함수 ========
 def create_user(username, password):
     hashed_pw = hash_password(password)
     try:
-        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw))
+        cursor.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_pw)
+        )
         conn.commit()
         return True
     except sqlite3.IntegrityError:
         return False
 
-# ======== 분실물 저장 ========
+# ======== 로그인 체크 함수 ========
+def check_login(username, password):
+    hashed_pw = hash_password(password)
+    cursor.execute(
+        "SELECT id FROM users WHERE username = ? AND password = ?", (username, hashed_pw)
+    )
+    result = cursor.fetchone()
+    if result:
+        return result[0]
+    return None
+
+# ======== 분실물 등록 함수 ========
 def save_lost_item(name, location, lost_date, user_id):
-    cursor.execute("INSERT INTO lost_items (name, location, lost_date, user_id) VALUES (?, ?, ?, ?)",
-                   (name, location, lost_date, user_id))
+    cursor.execute(
+        "INSERT INTO lost_items (name, location, lost_date, user_id) VALUES (?, ?, ?, ?)",
+        (name, location, lost_date, user_id),
+    )
     conn.commit()
 
-# ======== 검색 기능 ========
+# ======== 분실물 검색 함수 ========
 def search_lost_items(keyword):
     keyword_like = f"%{keyword}%"
-    cursor.execute("SELECT id, name, location, lost_date FROM lost_items WHERE name LIKE ? ORDER BY lost_date DESC", (keyword_like,))
+    cursor.execute(
+        "SELECT id, name, location, lost_date FROM lost_items WHERE name LIKE ? ORDER BY lost_date DESC",
+        (keyword_like,),
+    )
     return cursor.fetchall()
 
-# ======== 최근 등록 분실물 조회 ========
+# ======== 최근 등록 분실물 조회 함수 ========
 def get_recent_lost_items(limit=3):
-    cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC LIMIT ?", (limit,))
+    cursor.execute(
+        "SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC LIMIT ?",
+        (limit,),
+    )
     return cursor.fetchall()
 
-# ======== 채팅 저장 ========
+# ======== 채팅 저장 함수 ========
 def save_chat(item_id, user_id, message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute("INSERT INTO chats (item_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)", (item_id, user_id, message, timestamp))
+    cursor.execute(
+        "INSERT INTO chats (item_id, user_id, message, timestamp) VALUES (?, ?, ?, ?)",
+        (item_id, user_id, message, timestamp),
+    )
     conn.commit()
 
-# ======== 채팅 불러오기 ========
+# ======== 채팅 불러오기 함수 ========
 def get_chats(item_id):
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT users.username, chats.message, chats.timestamp
         FROM chats JOIN users ON chats.user_id = users.id
         WHERE item_id=?
         ORDER BY timestamp ASC
-        """, (item_id,))
+        """,
+        (item_id,),
+    )
     return cursor.fetchall()
 
-# ======== 사이드바 메뉴 생성 및 이미지 수정 ========
+# ======== 사이드바 메뉴 및 로고 ========
 def sidebar_menu():
     st.sidebar.title("PKNU FINDER")
     menu = st.sidebar.radio("", ["홈", "분실물 등록", "채팅", "마이페이지"])
     st.sidebar.markdown(
         """
         <div style='position:fixed; bottom:20px; width:80%; max-width:150px;'>
-            <img src='pknulogo.png' 
+            <img src='https://upload.wikimedia.org/wikipedia/commons/8/8f/Pukyong_National_University_Logo.svg' 
                  alt='부경대학교 로고' style='width:100%; height:auto;'/>
         </div>
-        """, 
-        unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
     return menu
 
-# ======== 로그인 / 로그아웃 버튼 (크기 조정) ========
+# ======== 로그인 / 로그아웃 버튼 ========
 def login_buttons():
-    cols = st.columns([8,2])
+    cols = st.columns([8, 2])
     with cols[1]:
-        if st.session_state.get("login", False):
+        if st.session_state.login:
             if st.button("로그아웃", key="logout"):
                 st.session_state.login = False
                 st.session_state.user_id = None
@@ -135,28 +153,7 @@ def login_buttons():
                 st.session_state.page = "login"
                 st.experimental_rerun()
 
-def main():
-    page = st.session_state.get("page", "home")
-
-    if page == "login":
-        login_page()
-        return  # 로그인 화면 출력 후 종료
-
-    login_buttons()
-
-    if st.session_state.get("login", False):
-        # 로그인 상태일 때 메뉴에 따라 페이지 출력
-        menu = sidebar_menu()
-        if menu == "홈":
-            home_page()
-        elif menu == "분실물 등록":
-            lost_registration_page()
-        ...
-    else:
-        # 비로그인 상태면 홈이나 로그인 페이지로 제한 가능
-        home_page()
-
-# ======== 로그인 & 회원가입 페이지 ========
+# ======== 로그인 및 회원가입 페이지 ========
 def login_page():
     st.title("회원가입 / 로그인")
     tab = st.radio("선택하세요:", ["로그인", "회원가입"])
@@ -178,6 +175,7 @@ def login_page():
             if user_id:
                 st.session_state.login = True
                 st.session_state.user_id = user_id
+                st.session_state.page = "home"
                 st.success(f"{username}님, 환영합니다!")
                 st.experimental_rerun()
             else:
@@ -229,10 +227,12 @@ def search_page():
             st.session_state.selected_item = item[0]
             st.experimental_rerun()
 
-# ======== 분실물 전체보기 페이지 ========
+# ======== 전체 분실물 목록 페이지 ========
 def lost_items_page():
     st.title("전체 분실물 목록")
-    cursor.execute("SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC")
+    cursor.execute(
+        "SELECT id, name, location, lost_date FROM lost_items ORDER BY lost_date DESC"
+    )
     items = cursor.fetchall()
 
     if items:
@@ -267,8 +267,8 @@ def lost_detail_page():
     else:
         st.info("채팅 기능 사용하려면 로그인하세요.")
         if st.button("로그인"):
-            login_page()
-            st.stop()
+            st.session_state.page = "login"
+            st.experimental_rerun()
 
 # ======== 분실물 등록 페이지 ========
 def lost_registration_page():
@@ -276,8 +276,8 @@ def lost_registration_page():
     if not st.session_state.login:
         st.info("분실물 등록을 위해 로그인하세요.")
         if st.button("로그인"):
-            login_page()
-            st.stop()
+            st.session_state.page = "login"
+            st.experimental_rerun()
         return
 
     name = st.text_input("물건 이름")
@@ -297,8 +297,8 @@ def chat_page():
     if not st.session_state.login:
         st.info("채팅 사용을 위해 로그인하세요.")
         if st.button("로그인"):
-            login_page()
-            st.stop()
+            st.session_state.page = "login"
+            st.experimental_rerun()
         return
 
     item_id = st.session_state.selected_item
@@ -321,8 +321,8 @@ def mypage():
     if not st.session_state.login:
         st.info("마이페이지 사용을 위해 로그인하세요.")
         if st.button("로그인"):
-            login_page()
-            st.stop()
+            st.session_state.page = "login"
+            st.experimental_rerun()
         return
 
     st.title("마이페이지")
@@ -330,10 +330,15 @@ def mypage():
     user = cursor.fetchone()
     st.write(f"환영합니다, {user[0]}님!")
 
-# ======== 메인 함수 ========
+# ======== 메인 루프 ========
 def main():
     menu = sidebar_menu()
     login_buttons()
+
+    # 페이지 상태 관리를 통해 페이지 전환
+    if st.session_state.page == "login":
+        login_page()
+        return
 
     if menu == "홈":
         if st.session_state.keyword:
@@ -349,6 +354,7 @@ def main():
 
     if st.session_state.selected_item is not None:
         lost_detail_page()
+
 
 if __name__ == "__main__":
     main()
