@@ -123,18 +123,38 @@ def sidebar_menu():
 
 # ======== 로그인 / 로그아웃 버튼 (크기 조정) ========
 def login_buttons():
-    cols = st.columns([8, 2])
+    cols = st.columns([8,2])
     with cols[1]:
-        if st.session_state.login:
+        if st.session_state.get("login", False):
             if st.button("로그아웃", key="logout"):
                 st.session_state.login = False
                 st.session_state.user_id = None
                 st.experimental_rerun()
         else:
             if st.button("회원가입/로그인", key="login"):
-                # 페이지 전환을 위해 세션 변수 설정 후 바로 재실행
                 st.session_state.page = "login"
                 st.experimental_rerun()
+
+def main():
+    page = st.session_state.get("page", "home")
+
+    if page == "login":
+        login_page()
+        return  # 로그인 화면 출력 후 종료
+
+    login_buttons()
+
+    if st.session_state.get("login", False):
+        # 로그인 상태일 때 메뉴에 따라 페이지 출력
+        menu = sidebar_menu()
+        if menu == "홈":
+            home_page()
+        elif menu == "분실물 등록":
+            lost_registration_page()
+        ...
+    else:
+        # 비로그인 상태면 홈이나 로그인 페이지로 제한 가능
+        home_page()
 
 # ======== 로그인 & 회원가입 페이지 ========
 def login_page():
