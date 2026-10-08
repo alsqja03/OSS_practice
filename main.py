@@ -55,6 +55,8 @@ def main():
         if 'home' in globals(): home.home_page()
     elif menu == "분실물 등록":
         if 'registration' in globals(): registration.lost_registration_page()
+    elif menu == "분실물 검색":
+        if 'registration' in globals(): search.search_page()
     elif menu == "채팅":
         if 'chat' in globals(): chat.chat_page()
     elif menu == "마이페이지":
