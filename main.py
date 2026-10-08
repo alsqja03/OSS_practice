@@ -1,67 +1,96 @@
-import streamlit as st
 import database
+import streamlit as st
 
-# 모듈 로드 예외 처리 (팀원들이 아직 파일을 안 만들었을 때를 대비)
-try:
-    from views import home, registration, search, chat, mypage
-except ImportError:
-    st.error("views 폴더와 내부 파이썬 파일들을 확인해주세요.")
+# 1. 페이지 설정은 최상단에서 단 1회만 호출해야 합니다.
+st.set_page_config(
+    page_title="PKNU FINDER",
+    page_icon="🎒",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-# ======== 세션 상태 초기화 ========
-if "login" not in st.session_state:
-    st.session_state.login = False
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+# 2. 데이터베이스 초기화 (테이블 자동 생성)
+database.init_db()
 
-# ======== 사이드바 레이아웃 ========
-def render_sidebar():
-    st.sidebar.title("PKNU FINDER")
-    menu = st.sidebar.radio("메뉴 이동", ["홈", "분실물 등록", "분실물 검색", "채팅", "마이페이지"])
-    return menu
 
-# ======== [담당 파트] 상단 로그인/로그아웃 버튼 ========
-def render_auth_buttons():
-    cols = st.columns([8, 2])
-    with cols[1]:
-        if st.session_state.login:
-            if st.button("로그아웃", key="logout_btn"):
-                st.session_state.login = False
-                st.session_state.user_id = None
-                st.session_state.page = "home"
-                st.rerun()
-        else:
-            if st.button("회원가입/로그인", key="login_btn"):
-                st.session_state.page = "login"
-                st.rerun()
+# 3. 세션 상태(Session State) 초기화
+def init_session():
+    if "is_logged_in" not in st.session_state:
+        st.session_state.is_logged_in = False
+    if "user_id" not in st.session_state:
+        st.session_state.user_id = None
+    if "username" not in st.session_state:
+        st.session_state.username = None
 
-# ======== 메인 라우팅 ========
+
 def main():
-    menu = render_sidebar()
-    render_auth_buttons()
+    init_session()
 
-    # 로그인 상태에서 로그인 페이지 접근 제어
-    if st.session_state.login and st.session_state.page == "login":
-        st.session_state.page = "home"
-        st.rerun()
+    # 사이드바 상단 브랜드 표시
+    st.sidebar.title("🎒 PKNU FINDER")
 
-    # 페이지 라우팅
-    if st.session_state.page == "login":
-        if 'mypage' in globals(): mypage.login_page()
+    # 로그인 상태 메시지 및 로그아웃 버튼
+    if st.session_state.is_logged_in:
+        st.sidebar.success(f"**{st.session_state.username}**님 환영합니다!")
+        if st.sidebar.button("로그아웃", use_container_width=True):
+            st.session_state.is_logged_in = False
+            st.session_state.user_id = None
+            st.session_state.username = None
+            st.rerun()
+        st.sidebar.markdown("---")
+
+    # 사이드바 내비게이션 메뉴
+    menu_options = ["홈", "분실물 검색", "습득물 등록", "채팅", "마이페이지"]
+    menu = st.sidebar.radio("메뉴 선택", menu_options)
+
+    # dynamically import views (동적 모듈 로드)
+    try:
+        from views import chat, home, mypage, registration, search
+    except ImportError as e:
+        st.error(f"뷰 모듈을 불러오는 중 오류가 발생했습니다: {e}")
         return
 
+    # 메뉴별 페이지 라우팅
     if menu == "홈":
-        if 'home' in globals(): home.home_page()
-    elif menu == "분실물 등록":
-        if 'registration' in globals(): registration.lost_registration_page()
+        if hasattr(home, "home_screen"):
+            home.home_screen()
+        elif hasattr(home, "home_page"):
+            home.home_page()
+        else:
+            st.info("홈 페이지 화면입니다.")
+
     elif menu == "분실물 검색":
-        if 'registration' in globals(): search.search_page()
+        if hasattr(search, "search_screen"):
+            search.search_screen()
+        elif hasattr(search, "search_page"):
+            search.search_page()
+        else:
+            st.info("분실물 검색 페이지 화면입니다.")
+
+    elif menu == "습득물 등록":
+        if hasattr(registration, "registration_screen"):
+            registration.registration_screen()
+        elif hasattr(registration, "registration_page"):
+            registration.registration_page()
+        else:
+            st.info("습득물 등록 페이지 화면입니다.")
+
     elif menu == "채팅":
-        if 'chat' in globals(): chat.chat_page()
+        if hasattr(chat, "chat_screen"):
+            chat.chat_screen()
+        elif hasattr(chat, "chat_page"):
+            chat.chat_page()
+        else:
+            st.info("채팅 페이지 화면입니다.")
+
     elif menu == "마이페이지":
-        if 'mypage' in globals(): mypage.mypage_screen()
+        if hasattr(mypage, "mypage_screen"):
+            mypage.mypage_screen()
+        elif hasattr(mypage, "mypage_page"):
+            mypage.mypage_page()
+        else:
+            st.info("마이페이지 화면입니다.")
+
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="PKNU FINDER", page_icon="🎒", layout="centered")
     main()
