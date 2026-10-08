@@ -147,11 +147,11 @@ def login_buttons():
             if st.button("로그아웃", key="logout"):
                 st.session_state.login = False
                 st.session_state.user_id = None
-                st.experimental_rerun()
+                st.rerun()
         else:
-            if st.button("회원가입/로그인", key="login"):
+            if st.button("회원가입/로그인", key="login_btn"):
                 st.session_state.page = "login"
-                st.experimental_rerun()
+                st.rerun()
 
 # ======== 로그인 및 회원가입 페이지 ========
 def login_page():
@@ -177,7 +177,7 @@ def login_page():
                 st.session_state.user_id = user_id
                 st.session_state.page = "home"
                 st.success(f"{username}님, 환영합니다!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("아이디 또는 비밀번호가 일치하지 않습니다.")
 
@@ -189,7 +189,7 @@ def home_page():
     keyword = st.text_input("물건 이름, 장소, 키워드를 입력하세요.", st.session_state.keyword)
     if st.button("검색"):
         st.session_state.keyword = keyword.strip()
-        st.experimental_rerun()
+        st.rerun()
 
     recent_items = get_recent_lost_items()
 
@@ -204,14 +204,14 @@ def home_page():
                 st.write(item[3])
                 if st.button(f"상세보기-{item[0]}"):
                     st.session_state.selected_item = item[0]
-                    st.experimental_rerun()
+                    st.rerun()
     else:
         st.info("현재 등록된 분실물이 없습니다.")
 
     if st.button("전체보기"):
         st.session_state.keyword = ""
         st.session_state.page = "lost_items"
-        st.experimental_rerun()
+        st.rerun()
 
 # ======== 검색 결과 페이지 ========
 def search_page():
@@ -225,7 +225,7 @@ def search_page():
         st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
         if st.button(f"상세보기-{item[0]}"):
             st.session_state.selected_item = item[0]
-            st.experimental_rerun()
+            st.rerun()
 
 # ======== 전체 분실물 목록 페이지 ========
 def lost_items_page():
@@ -240,7 +240,7 @@ def lost_items_page():
             st.write(f"**{item[1]}**  -  {item[2]}  -  {item[3]}")
             if st.button(f"상세보기-{item[0]}"):
                 st.session_state.selected_item = item[0]
-                st.experimental_rerun()
+                st.rerun()
     else:
         st.info("현재 등록된 분실물이 없습니다.")
 
@@ -260,101 +260,4 @@ def lost_detail_page():
     st.write(f"등록일: {item[2]}")
     st.image("https://via.placeholder.com/300")
 
-    if st.session_state.login:
-        if st.button("채팅하기"):
-            st.session_state.page = "chat"
-            st.experimental_rerun()
-    else:
-        st.info("채팅 기능 사용하려면 로그인하세요.")
-        if st.button("로그인"):
-            st.session_state.page = "login"
-            st.experimental_rerun()
-
-# ======== 분실물 등록 페이지 ========
-def lost_registration_page():
-    st.title("분실물 등록")
-    if not st.session_state.login:
-        st.info("분실물 등록을 위해 로그인하세요.")
-        if st.button("로그인"):
-            st.session_state.page = "login"
-            st.experimental_rerun()
-        return
-
-    name = st.text_input("물건 이름")
-    location = st.text_input("분실 위치")
-    lost_date = st.date_input("분실 날짜")
-
-    if st.button("등록"):
-        if not name or not location:
-            st.warning("모든 항목을 입력하세요.")
-            return
-        save_lost_item(name, location, lost_date.strftime("%Y-%m-%d"), st.session_state.user_id)
-        st.success("분실물이 등록되었습니다!")
-        st.experimental_rerun()
-
-# ======== 채팅 페이지 ========
-def chat_page():
-    if not st.session_state.login:
-        st.info("채팅 사용을 위해 로그인하세요.")
-        if st.button("로그인"):
-            st.session_state.page = "login"
-            st.experimental_rerun()
-        return
-
-    item_id = st.session_state.selected_item
-    if not item_id:
-        st.info("채팅할 분실물을 선택하세요.")
-        return
-
-    st.title("채팅")
-    chats = get_chats(item_id)
-    for username, message, timestamp in chats:
-        st.markdown(f"**{username}**  ({timestamp}): {message}")
-
-    msg = st.text_input("메시지 입력")
-    if st.button("전송") and msg.strip():
-        save_chat(item_id, st.session_state.user_id, msg.strip())
-        st.experimental_rerun()
-
-# ======== 마이페이지 ========
-def mypage():
-    if not st.session_state.login:
-        st.info("마이페이지 사용을 위해 로그인하세요.")
-        if st.button("로그인"):
-            st.session_state.page = "login"
-            st.experimental_rerun()
-        return
-
-    st.title("마이페이지")
-    cursor.execute("SELECT username FROM users WHERE id=?", (st.session_state.user_id,))
-    user = cursor.fetchone()
-    st.write(f"환영합니다, {user[0]}님!")
-
-# ======== 메인 루프 ========
-def main():
-    menu = sidebar_menu()
-    login_buttons()
-
-    # 페이지 상태 관리를 통해 페이지 전환
-    if st.session_state.page == "login":
-        login_page()
-        return
-
-    if menu == "홈":
-        if st.session_state.keyword:
-            search_page()
-        else:
-            home_page()
-    elif menu == "분실물 등록":
-        lost_registration_page()
-    elif menu == "채팅":
-        chat_page()
-    elif menu == "마이페이지":
-        mypage()
-
-    if st.session_state.selected_item is not None:
-        lost_detail_page()
-
-
-if __name__ == "__main__":
-    main()
+    if st.session_state.
