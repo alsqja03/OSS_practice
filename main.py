@@ -18,7 +18,7 @@ if "page" not in st.session_state:
 # ======== 사이드바 레이아웃 ========
 def render_sidebar():
     st.sidebar.title("PKNU FINDER")
-    menu = st.sidebar.radio("메뉴 이동", ["홈", "분실물 등록", "채팅", "마이페이지"])
+    menu = st.sidebar.radio("메뉴 이동", ["홈", "분실물 등록", "분실물 검색", "채팅", "마이페이지"])
     return menu
 
 # ======== [담당 파트] 상단 로그인/로그아웃 버튼 ========
