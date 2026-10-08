@@ -3,7 +3,7 @@ import database
 
 # 모듈 로드 예외 처리 (팀원들이 아직 파일을 안 만들었을 때를 대비)
 try:
-    from views import home, registration, chat, mypage
+    from views import home, registration, search, chat, mypage
 except ImportError:
     st.error("views 폴더와 내부 파이썬 파일들을 확인해주세요.")
 
