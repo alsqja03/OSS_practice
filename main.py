@@ -40,7 +40,7 @@ def main():
         st.sidebar.markdown("---")
 
     # 사이드바 내비게이션 메뉴
-    menu_options = ["홈", "분실물 검색", "습득물 등록", "채팅", "마이페이지"]
+    menu_options = ["홈", "분실물 검색", "분실물/습득물 등록", "채팅", "마이페이지"]
     menu = st.sidebar.radio("메뉴 선택", menu_options)
 
     # dynamically import views (동적 모듈 로드)
@@ -67,7 +67,7 @@ def main():
         else:
             st.info("분실물 검색 페이지 화면입니다.")
 
-    elif menu == "습득물 등록":
+    elif menu == "분실물/습득물 등록":
         if hasattr(registration, "registration_screen"):
             registration.registration_screen()
         elif hasattr(registration, "registration_page"):
