@@ -108,7 +108,10 @@ def get_username(user_id):
 
 
 def delete_user(user_id):
-    """회원 탈퇴: PRAGMA foreign_keys = ON 설정으로 users 삭제 시 연관 데이터(lost_items, chats, bookmarks)가 ON DELETE CASCADE로 자동 삭제됩니다."""
+    """
+    회원 탈퇴: PRAGMA foreign_keys = ON 설정으로 users 삭제 시
+    연관 데이터(lost_items, chats, bookmarks)가 CASCADE로 자동 삭제됩니다.
+    """
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM users WHERE id=?", (user_id,))
