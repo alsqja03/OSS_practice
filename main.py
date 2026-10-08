@@ -260,4 +260,26 @@ def lost_detail_page():
     st.write(f"등록일: {item[2]}")
     st.image("https://via.placeholder.com/300")
 
-    if st.session_state.
+    f st.session_state.page == "login":
+        login_page()
+        return
+
+    if menu == "홈":
+        if st.session_state.keyword:
+            search_page()
+        else:
+            home_page()
+    elif menu == "분실물 등록":
+        lost_registration_page()
+    elif menu == "채팅":
+        chat_page()
+    elif menu == "마이페이지":
+        mypage()
+
+    if st.session_state.selected_item is not None:
+        st.markdown("---")
+        lost_detail_page()
+
+
+if __name__ == "__main__":
+    main()
