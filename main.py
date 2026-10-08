@@ -4,7 +4,7 @@ import streamlit as st
 # 1. 페이지 설정은 최상단에서 단 1회만 호출해야 합니다.
 st.set_page_config(
     page_title="PKNU FINDER",
-    page_icon="🎒",
+    page_icon="plogo.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
