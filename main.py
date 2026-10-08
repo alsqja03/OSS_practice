@@ -27,7 +27,7 @@ def main():
     init_session()
 
     # 사이드바 상단 브랜드 표시
-    st.sidebar.title("🎒 PKNU FINDER")
+    st.sidebar.title("PKNU FINDER")
 
     # 로그인 상태 메시지 및 로그아웃 버튼
     if st.session_state.is_logged_in:
