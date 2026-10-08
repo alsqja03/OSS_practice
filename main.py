@@ -260,7 +260,90 @@ def lost_detail_page():
     st.write(f"등록일: {item[2]}")
     st.image("https://via.placeholder.com/300")
 
-    f st.session_state.page == "login":
+    if st.session_state.login:
+        if st.button("채팅하기"):
+            st.session_state.page = "chat"
+            st.rerun()
+    else:
+        st.info("채팅 기능 사용하려면 로그인하세요.")
+        if st.button("로그인", key="detail_login"):
+            st.session_state.page = "login"
+            st.rerun()
+
+# ======== 분실물 등록 페이지 ========
+def lost_registration_page():
+    st.title("분실물 등록")
+    if not st.session_state.login:
+        st.info("분실물 등록을 위해 로그인하세요.")
+        if st.button("로그인", key="reg_login"):
+            st.session_state.page = "login"
+            st.rerun()
+        return
+
+    name = st.text_input("물건 이름")
+    location = st.text_input("분실 위치")
+    lost_date = st.date_input("분실 날짜")
+
+    if st.button("등록"):
+        if not name or not location:
+            st.warning("모든 항목을 입력하세요.")
+            return
+        save_lost_item(name, location, lost_date.strftime("%Y-%m-%d"), st.session_state.user_id)
+        st.success("분실물이 등록되었습니다!")
+        st.session_state.page = "home"
+        st.rerun()
+
+# ======== 채팅 페이지 ========
+def chat_page():
+    if not st.session_state.login:
+        st.info("채팅 사용을 위해 로그인하세요.")
+        if st.button("로그인", key="chat_page_login"):
+            st.session_state.page = "login"
+            st.rerun()
+        return
+
+    item_id = st.session_state.selected_item
+    if not item_id:
+        st.info("채팅할 분실물을 선택하세요.")
+        return
+
+    st.title("채팅")
+    chats = get_chats(item_id)
+    for username, message, timestamp in chats:
+        st.markdown(f"**{username}**  ({timestamp}): {message}")
+
+    msg = st.text_input("메시지 입력")
+    if st.button("전송") and msg.strip():
+        save_chat(item_id, st.session_state.user_id, msg.strip())
+        st.rerun()
+
+# ======== 마이페이지 ========
+def mypage():
+    if not st.session_state.login:
+        st.info("마이페이지 사용을 위해 로그인하세요.")
+        if st.button("로그인", key="mypage_login"):
+            st.session_state.page = "login"
+            st.rerun()
+        return
+
+    st.title("마이페이지")
+    cursor.execute("SELECT username FROM users WHERE id=?", (st.session_state.user_id,))
+    user = cursor.fetchone()
+    if user:
+        st.write(f"환영합니다, **{user[0]}**님!")
+
+# ======== 메인 루프 ========
+def main():
+    menu = sidebar_menu()
+    login_buttons()
+
+    # [수정됨] 로그인 상태이면서 페이지가 login인 경우 홈으로 리다이렉트하여 UI 비노출
+    if st.session_state.login and st.session_state.page == "login":
+        st.session_state.page = "home"
+        st.rerun()
+
+    # 페이지 상태 관리를 통해 페이지 전환
+    if st.session_state.page == "login":
         login_page()
         return
 
@@ -279,7 +362,6 @@ def lost_detail_page():
     if st.session_state.selected_item is not None:
         st.markdown("---")
         lost_detail_page()
-
 
 if __name__ == "__main__":
     main()
