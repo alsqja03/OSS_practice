@@ -54,8 +54,9 @@ def init_db():
     conn.commit()
     return conn
 
-conn = init_db()
-cursor = conn.cursor()
+def get_connection():
+    # 필요에 따라 check_same_thread=False 옵션을 추가할 수 있습니다.
+    return sqlite3.connect("database.db", check_same_thread=False)
 
 # SQLite 외래키 제약조건(CASCADE) 활성화 (탈퇴 시 연관 데이터 자동 삭제용)
 cursor.execute("PRAGMA foreign_keys = ON")
@@ -80,9 +81,15 @@ def check_login(username, password):
     return result[0] if result else None
 
 def get_username(user_id):
-    cursor.execute("SELECT username FROM users WHERE id=?", (user_id,))
-    result = cursor.fetchone()
-    return result[0] if result else None
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT username FROM users WHERE id=?", (user_id,))
+        result = cursor.fetchone()
+        return result[0] if result else None
+    finally:
+        cursor.close()
+        conn.close()
 
 def delete_user(user_id):
     # 회원 탈퇴: 회원이 쓴 글, 채팅, 북마크 내역, 계정을 모두 삭제합니다.
