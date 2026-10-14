@@ -3,20 +3,19 @@ import sqlite3
 
 DB_NAME = "pkunfinder.db"
 
-
+#DB 연결을 생성, 외래키 제약조건 활성화
 def get_connection():
-    """DB 연결을 생성하고 외래키(FOREIGN KEY) 제약조건을 활성화합니다."""
     conn = sqlite3.connect(DB_NAME, check_same_thread=False)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
-# ======== DB 초기화 ========
+# DB 초기화
 def init_db():
     with get_connection() as conn:
         cursor = conn.cursor()
 
-        # 1. users 테이블
+        # 유저 테이블
         cursor.execute(
             """
         CREATE TABLE IF NOT EXISTS users (
@@ -26,7 +25,7 @@ def init_db():
         )"""
         )
 
-        # 2. lost_items 테이블
+        #분실물 테이블
         cursor.execute(
             """
         CREATE TABLE IF NOT EXISTS lost_items (
@@ -39,7 +38,7 @@ def init_db():
         )"""
         )
 
-        # 3. chats 테이블
+        #채팅 테이블
         cursor.execute(
             """
         CREATE TABLE IF NOT EXISTS chats (
@@ -53,7 +52,7 @@ def init_db():
         )"""
         )
 
-        # 4. bookmarks 테이블 (북마크 기능)
+        #북마크 테이블
         cursor.execute(
             """
         CREATE TABLE IF NOT EXISTS bookmarks (
@@ -73,7 +72,7 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
-# ======== 회원 관리 (가입, 로그인, 탈퇴) ========
+# 회원관리 (로그인, 회원 가입/탈퇴)
 def create_user(username, password):
     try:
         with get_connection() as conn:
@@ -118,7 +117,7 @@ def delete_user(user_id):
         conn.commit()
 
 
-# ======== 마이페이지 및 북마크 로직 ========
+# 마이페이지, 북마크
 def add_bookmark(user_id, item_id):
     try:
         with get_connection() as conn:
