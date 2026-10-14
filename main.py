@@ -3,9 +3,9 @@ from database import init_db, get_username
 from views.mypage.user import create_user, check_login
 from views.mypage.mypage import render_mypage
 from views.home.home import render_home  # 홈 화면 임포트
-# from views.search.search import render_search
+from views.search.search import render_search
 # from views.chat.chat import render_chat
-# from views.registration.registration import render_registration
+from views.registration.registration import render_registration
 
 # 1. 데이터베이스 초기화 (앱 실행 시 테이블 생성)
 init_db()
