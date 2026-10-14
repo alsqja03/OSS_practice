@@ -2,8 +2,7 @@ import streamlit as st
 from database import init_db, get_username
 from views.mypage.user import create_user, check_login
 from views.mypage.mypage import render_mypage
-# 만약 다른 뷰(홈, 검색, 채팅, 등록 등)가 있다면 아래와 같이 임포트해서 연결하세요.
-# from views.home.home import render_home
+from views.home.home import render_home  # 홈 화면 임포트
 # from views.search.search import render_search
 # from views.chat.chat import render_chat
 # from views.registration.registration import render_registration
@@ -24,6 +23,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
+if "current_menu" not in st.session_state:
+    st.session_state.current_menu = "홈"
 
 
 def render_auth_page():
@@ -43,6 +44,7 @@ def render_auth_page():
                 if user_id:
                     st.session_state.logged_in = True
                     st.session_state.user_id = user_id
+                    st.session_state.current_menu = "홈"  # 로그인 직후 홈으로 설정
                     st.success(f"환영합니다, {login_username}님!")
                     st.rerun()
                 else:
@@ -76,47 +78,66 @@ def main():
         render_auth_page()
         return
 
-    # 로그인이 되어 있는 경우 사이드바 메뉴 구성
-    st.sidebar.title("📌 PKNU Finder 메뉴")
+    # 1. 사이드바 제목 (클릭 시 홈 화면으로 이동하도록 버튼 활용)
+    if st.sidebar.button("📌 PKNU Finder", use_container_width=True):
+        st.session_state.current_menu = "홈"
+        st.rerun()
+
+    st.sidebar.markdown("---")
+
+    # 메뉴 목록
+    menu_options = ["홈", "분실물 검색", "분실물 등록", "채팅", "마이페이지"]
     
-    current_username = get_username(st.session_state.user_id)
-    st.sidebar.info(f"현재 접속 계정: **{current_username}**님")
+    # 세션에 저장된 현재 메뉴의 인덱스 계산
+    if st.session_state.current_menu not in menu_options:
+        st.session_state.current_menu = "홈"
+    default_index = menu_options.index(st.session_state.current_menu)
 
     menu = st.sidebar.radio(
         "이동하기", 
-        ["홈", "분실물 검색", "분실물 등록", "채팅", "마이페이지"]
+        menu_options,
+        index=default_index
     )
+    
+    # 사용자가 라디오 버튼을 통해 메뉴를 바꿨을 때 상태 동기화
+    if menu != st.session_state.current_menu:
+        st.session_state.current_menu = menu
+        st.rerun()
 
     st.sidebar.markdown("---")
-    if st.sidebar.button("로그아웃", type="secondary"):
+
+    # 3. 현재 접속 계정 표시 (박스 형태 없이 텍스트로 로그아웃 바로 위에 배치)
+    current_username = get_username(st.session_state.user_id)
+    st.sidebar.text(f"접속 계정: {current_username}님")
+
+    # 로그아웃 버튼
+    if st.sidebar.button("로그아웃", type="secondary", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.user_id = None
+        st.session_state.current_menu = "홈"
         st.success("로그아웃되었습니다.")
         st.rerun()
 
     # 메뉴 선택에 따른 화면 라우팅
-    if menu == "홈":
-        st.title("🏠 홈 화면")
-        st.write("PKNU Finder에 오신 것을 환영합니다! 교내 분실물을 쉽게 찾고 등록할 수 있습니다.")
-        # render_home()  # home.py의 렌더링 함수 연결 가능
+    if st.session_state.current_menu == "홈":
+        render_home()  # views/home/home.py의 홈 화면 함수 호출
 
-    elif menu == "분실물 검색":
+    elif st.session_state.current_menu == "분실물 검색":
         st.title("🔎 분실물 검색")
         st.write("등록된 분실물 정보를 검색하는 공간입니다.")
-        # render_search()  # search.py의 렌더링 함수 연결 가능
+        # render_search()
 
-    elif menu == "분실물 등록":
+    elif st.session_state.current_menu == "분실물 등록":
         st.title("📝 분실물 등록")
         st.write("습득했거나 분실한 물품 정보를 등록하세요.")
-        # render_registration()  # registration.py의 렌더링 함수 연결 가능
+        # render_registration()
 
-    elif menu == "채팅":
+    elif st.session_state.current_menu == "채팅":
         st.title("💬 문의 채팅")
         st.write("분실물과 관련된 소통을 진행하는 채팅방입니다.")
-        # render_chat()  # chat.py의 렌더링 함수 연결 가능
+        # render_chat()
 
-    elif menu == "마이페이지":
-        # 방금 분리한 마이페이지 렌더링 함수 호출
+    elif st.session_state.current_menu == "마이페이지":
         render_mypage()
 
 
