@@ -120,14 +120,14 @@ def main():
         render_home()  # views/home/home.py의 홈 화면 함수 호출
 
     elif st.session_state.current_menu == "분실물 검색":
-        st.title("🔎 분실물 검색")
-        st.write("등록된 분실물 정보를 검색하는 공간입니다.")
-        # render_search()
+        # st.title("🔎 분실물 검색")
+        # st.write("등록된 분실물 정보를 검색하는 공간입니다.")
+        render_search()
 
     elif st.session_state.current_menu == "분실물 등록":
-        st.title("📝 분실물 등록")
-        st.write("습득했거나 분실한 물품 정보를 등록하세요.")
-        # render_registration()
+        # st.title("📝 분실물 등록")
+        # st.write("습득했거나 분실한 물품 정보를 등록하세요.")
+        render_registration()
 
     elif st.session_state.current_menu == "채팅":
         st.title("💬 문의 채팅")
