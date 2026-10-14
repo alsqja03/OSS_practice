@@ -79,10 +79,7 @@ def main():
         return
 
     # 1. 사이드바 제목 (클릭 시 홈 화면으로 이동하도록 버튼 활용)
-    if st.sidebar.button("📌 PKNU Finder", use_container_width=True):
-        st.session_state.current_menu = "홈"
-        st.rerun()
-
+    st.sidebar.title("📌 PKNU Finder 메뉴")
     st.sidebar.markdown("---")
 
     # 메뉴 목록
