@@ -1197,6 +1197,62 @@ Storage에는 실제 파일을, `lost_item_images`에는 파일 경로를 저장
 
 ---
 
+# 12. 참고 자료 (References)
+
+이 가이드의 설명과 Python 코드 예제는 Supabase 공식 문서를 참고하여 작성했습니다.
+
+## 12-1. Supabase 기본 사용법
+
+| 참고 자료 | 설명 |
+|---|---|
+| [Supabase 공식 문서](https://supabase.com/docs) | Supabase 전체 기능 및 사용 방법 |
+| [Python Quickstart](https://supabase.com/docs/guides/getting-started/quickstarts/flask) | Python 프로젝트에서 Supabase 연결 및 데이터 조회 |
+| [Python Client Library](https://supabase.com/docs/reference/python/introduction) | Python 클라이언트 라이브러리 사용법 |
+
+## 12-2. 데이터베이스 CRUD
+
+| 참고 자료 | 설명 |
+|---|---|
+| [Insert data](https://supabase.com/docs/reference/python/insert) | 테이블에 새로운 데이터 입력 |
+| [Select data](https://supabase.com/docs/reference/python/select) | 테이블에 저장된 데이터 조회 |
+| [Update data](https://supabase.com/docs/reference/python/update) | 기존 데이터 수정 |
+| [Delete data](https://supabase.com/docs/reference/python/delete) | 기존 데이터 삭제 |
+| [Filters](https://supabase.com/docs/reference/python/using-filters) | 특정 조건에 맞는 데이터 검색 및 필터링 |
+| [Order results](https://supabase.com/docs/reference/python/order) | 조회 결과 정렬 |
+
+## 12-3. 사용자 인증 (Authentication)
+
+| 참고 자료 | 설명 |
+|---|---|
+| [Supabase Auth](https://supabase.com/docs/guides/auth) | 회원가입, 로그인, 사용자 인증 |
+| [Get User](https://supabase.com/docs/reference/python/auth-getuser) | 현재 인증된 사용자 정보 가져오기 |
+| [User Management](https://supabase.com/docs/guides/auth/managing-user-data) | 사용자 정보 관리 및 데이터베이스 연결 |
+
+## 12-4. 이미지 및 파일 관리 (Storage)
+
+| 참고 자료 | 설명 |
+|---|---|
+| [Supabase Storage](https://supabase.com/docs/guides/storage) | 파일 및 이미지 저장소 사용 방법 |
+| [Python Upload File](https://supabase.com/docs/reference/python/storage-from-upload) | Python에서 파일 업로드 |
+| [Python Create Signed URL](https://supabase.com/docs/reference/python/storage-from-createsignedurl) | Private Bucket 파일 접근을 위한 Signed URL 생성 |
+| [Storage Access Control](https://supabase.com/docs/guides/storage/security/access-control) | Storage 파일 접근 권한 및 정책 설정 |
+
+## 12-5. 데이터베이스 보안 (RLS)
+
+| 참고 자료 | 설명 |
+|---|---|
+| [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security) | 사용자별 데이터 접근 권한 설정 |
+| [Database Security](https://supabase.com/docs/guides/database/secure-data) | 데이터베이스 보안 및 권한 관리 |
+
+## 12-6. Python 라이브러리
+
+| 참고 자료 | 설명 |
+|---|---|
+| [supabase-py GitHub](https://github.com/supabase/supabase-py) | Supabase Python 라이브러리 소스 코드 및 사용 예제 |
+| [supabase-py PyPI](https://pypi.org/project/supabase/) | Python 라이브러리 설치 및 버전 확인 |
+
+---
+
 ## 마무리
 
 Supabase를 사용할 때 가장 중요한 것은 각 테이블의 역할과 관계를 이해하는 것입니다.
