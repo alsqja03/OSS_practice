@@ -154,7 +154,7 @@ PKNU Finder는 Supabase Authentication을 이용해 로그인 기능을 구현�
 st.session_state["user_id"] = str(user.id)
 ```
 
-이 코드는 로그인 성공 처리 과정에서 실행되어야 합니다.
+이 코드는 로그인 성공 처리 과정에서 실행됩니다.
 
 그렇다면 게시글을 등록하거나 채팅을 작성할 때마다 로그인 정보를 다시 가져와야 할까요?
 
@@ -176,7 +176,7 @@ if not user_id:
 
 이후 게시글, 채팅, 북마크 등을 저장할 때 `user_id`를 사용하면 됩니다.
 
-**중요:** `session_state`에 사용자 ID를 저장하는 것과 데이터베이스에서 해당 사용자의 권한을 검증하는 것은 별개입니다. 실제 데이터 수정 및 삭제 시에는 서버에서도 권한을 확인해야 합니다.
+**중요:** `session_state`에 사용자 ID를 저장하는 것과 데이터베이스에서 해당 사용자의 권한을 검증하는 것은 별개입니다. 실제 데이터 수정 및 삭제 시에는 서버에서도 권한을 확인해야 합니다. `추후(2026.11.04 00:00 이내) 권한 검증 코드를 추가/수정하여 올리겠습니다. (alsqja03)`
 
 ---
 
@@ -212,139 +212,103 @@ PKNU Finder는 크게 5개의 테이블을 사용합니다.
 
 코드보다 먼저 실제 서비스에서 어떤 관계가 만들어지는지 생각해 보겠습니다.
 
-<text weight="semibold" color="default">① 사용자와 게시글의 관계</text>
+## ① 사용자와 게시글의 관계
 
-<box border radius="lg" padding={3} gap={2}>
-  <box background="rgba(59,130,246,0.10)" radius="md" padding={3} align="center">
-    **users (사용자)**
+먼저 사용자가 게시글을 작성하는 상황을 생각해 보겠습니다.
 
-    <text size="sm" color="secondary">사용자 A · 사용자 B · 사용자 C</text>
-  </box>
-  <box align="center" gap={1}>
-    <icon name="arrow-down" color="secondary" size="lg"/>
-    <text color="secondary" size="xs">게시글 작성</text>
-  </box>
-  <box background="rgba(16,185,129,0.10)" radius="md" padding={3} align="center">
-    **lost_items (게시글)**
+### `users` (사용자)
 
-    <text size="sm" color="secondary">검은색 지갑 · 흰색 우산 · 에어팟 케이스</text>
-  </box>
-  <text color="secondary" size="sm">한 명의 사용자가 여러 게시글을 작성할 수 있습니다. 각 게시글은 작성자 한 명의 ID를 가지고 있습니다.</text>
-</box>
+서비스에 가입한 사용자들이 저장되는 테이블입니다.
 
-예를 들어 사용자 A가 지갑과 우산 게시글을 각각 등록하면 다음과 같이 저장됩니다.
-
-| users.id | users.username |
+| id | username |
 |---|---|
 | UUID-A | 사용자 A |
+| UUID-B | 사용자 B |
+| UUID-C | 사용자 C |
 
-| lost_items.id | lost_items.title | lost_items.user_id |
+### `lost_items` (게시글)
+
+사용자가 등록한 분실물·습득물 게시글이 저장되는 테이블입니다.
+
+| id | title | user_id |
 |---|---|---|
 | 1 | 검은색 지갑 | UUID-A |
 | 2 | 파란색 우산 | UUID-A |
+| 3 | 에어팟 케이스 | UUID-B |
 
-두 게시글의 `user_id`가 모두 UUID-A이므로 같은 사용자가 작성했다는 사실을 알 수 있습니다.
+한 명의 사용자는 여러 게시글을 작성할 수 있습니다.
 
-<text weight="semibold" color="default">② 게시글과 이미지의 관계</text>
+예를 들어 사용자 A가 검은색 지갑과 파란색 우산 게시글을 작성했다면, 두 게시글의 `user_id`에는 모두 사용자 A의 고유 ID인 `UUID-A`가 저장됩니다.
 
-<box border radius="lg" padding={3} gap={2}>
-  <box background="rgba(16,185,129,0.10)" radius="md" padding={3} align="center">
-    **lost_items (게시글)**
+즉, `lost_items.user_id`는 게시글을 작성한 사용자가 누구인지 알려주는 값입니다.
 
-    <text size="sm" color="secondary">검은색 지갑 게시글 · ID 1</text>
-  </box>
-  <box align="center" gap={1}>
-    <icon name="arrow-down" color="secondary" size="lg"/>
-    <text color="secondary" size="xs">lost_item_id = 1</text>
-  </box>
-  <box background="rgba(245,158,11,0.10)" radius="md" padding={3} align="center" gap={2}>
-    **lost_item_images (이미지 경로)**
-    <row align="center" justify="center">
-      <badge>이미지 1</badge>
-      <badge>이미지 2</badge>
-      <badge>이미지 3</badge>
-    </row>
-  </box>
-  <text color="secondary" size="sm">하나의 게시글에 여러 장의 사진을 등록할 수 있습니다. 각 사진은 어떤 게시글에 속하는지 게시글 ID로 구분합니다.</text>
-</box>
+**정리**
 
-예를 들어 게시글 ID가 1인 지갑 게시글에 사진 2장을 등록하면 다음과 같습니다.
+```text
+users
+ ├── UUID-A (사용자 A)
+ │    ├── 게시글 1 (검은색 지갑)
+ │    └── 게시글 2 (파란색 우산)
+ │
+ ├── UUID-B (사용자 B)
+ │    └── 게시글 3 (에어팟 케이스)
+ │
+ └── UUID-C (사용자 C)
+```
+
+따라서 `users`와 `lost_items`는 **일대다(1:N) 관계**입니다.
+
+- 한 명의 사용자는 여러 게시글을 작성할 수 있습니다.
+- 하나의 게시글은 한 명의 작성자에게 연결됩니다.
+
+---
+
+## ② 게시글과 이미지의 관계
+
+이번에는 게시글 하나에 사진 여러 장을 등록하는 상황을 생각해 보겠습니다.
+
+### `lost_items` (게시글)
+
+| id | title |
+|---|---|
+| 1 | 검은색 지갑 |
+| 2 | 파란색 우산 |
+
+### `lost_item_images` (게시글 이미지)
 
 | id | lost_item_id | image_path |
 |---|---|---|
-| 1 | 1 | 1/image_a.jpg |
-| 2 | 1 | 1/image_b.jpg |
+| 1 | 1 | wallet/image1.jpg |
+| 2 | 1 | wallet/image2.jpg |
+| 3 | 1 | wallet/image3.jpg |
+| 4 | 2 | umbrella/image1.jpg |
 
-두 이미지 모두 `lost_item_id`가 1이므로 첫 번째 게시글에 첨부된 사진이라는 것을 알 수 있습니다.
+`lost_item_images.lost_item_id`는 이미지가 어떤 게시글에 속하는지 알려주는 값입니다.
 
-<text weight="semibold" color="default">③ 사용자와 북마크의 관계</text>
+예를 들어 `lost_item_id`가 모두 1인 이미지 3장은 게시글 ID가 1인 검은색 지갑 게시글에 등록된 사진입니다.
 
-<box border radius="lg" padding={3} gap={2}>
-  <box background="rgba(59,130,246,0.10)" radius="md" padding={3} align="center">
-    **users (사용자)**
-    <text size="sm" color="secondary">사용자 A · 사용자 B</text>
-  </box>
-  <box align="center" gap={1}>
-    <icon name="arrow-down-up" color="secondary" size="lg"/>
-    <text color="secondary" size="xs">bookmarks 테이블로 연결</text>
-  </box>
-  <box background="rgba(245,158,11,0.10)" radius="md" padding={3} align="center">
-    **bookmarks (북마크)**
-    <text size="sm" color="secondary">사용자 ID + 게시글 ID</text>
-  </box>
-  <box align="center" gap={1}>
-    <icon name="arrow-down-up" color="secondary" size="lg"/>
-    <text color="secondary" size="xs">게시글 ID로 연결</text>
-  </box>
-  <box background="rgba(16,185,129,0.10)" radius="md" padding={3} align="center">
-    **lost_items (게시글)**
-    <text size="sm" color="secondary">지갑 · 우산 · 에어팟 케이스</text>
-  </box>
-  <text color="secondary" size="sm">여러 사용자가 같은 게시글을 북마크할 수 있고, 한 사용자도 여러 게시글을 북마크할 수 있습니다.</text>
-</box>
+**정리**
 
-예를 들어 사용자 A가 게시글 1번과 2번을 북마크하고, 사용자 B가 게시글 1번을 북마크하면 다음과 같습니다.
+```text
+lost_items
+ ├── 게시글 1 (검은색 지갑)
+ │    ├── 이미지 1
+ │    ├── 이미지 2
+ │    └── 이미지 3
+ │
+ └── 게시글 2 (파란색 우산)
+      └── 이미지 4
+```
 
-| id | user_id | item_id |
-|---|---|---|
-| 1 | UUID-A | 1 |
-| 2 | UUID-A | 2 |
-| 3 | UUID-B | 1 |
+따라서 `lost_items`와 `lost_item_images`도 **일대다(1:N) 관계**입니다.
 
-`bookmarks`는 사용자와 게시글 사이의 관계를 기록하는 연결 테이블입니다.
+- 하나의 게시글에는 여러 장의 이미지가 연결될 수 있습니다.
+- 하나의 이미지는 하나의 게시글에 연결됩니다.
 
-<text weight="semibold" color="default">④ 사용자와 채팅의 관계</text>
+참고로 `image_path`에는 이미지 파일 자체가 들어가는 것이 아니라 Supabase Storage에 저장된 이미지의 경로가 들어갑니다.
 
-<box border radius="lg" padding={3} gap={2}>
-  <box background="rgba(59,130,246,0.10)" radius="md" padding={3} align="center">
-    **users (사용자)**
-    <text size="sm" color="secondary">메시지를 작성한 사람</text>
-  </box>
-  <box align="center">
-    <icon name="arrow-down" color="secondary" size="lg"/>
-  </box>
-  <box background="rgba(245,158,11,0.10)" radius="md" padding={3} align="center">
-    **chats (채팅 메시지)**
-    <text size="sm" color="secondary">작성자 ID + 게시글 ID + 메시지 내용</text>
-  </box>
-  <box align="center">
-    <icon name="arrow-down" color="secondary" size="lg"/>
-  </box>
-  <box background="rgba(16,185,129,0.10)" radius="md" padding={3} align="center">
-    **lost_items (게시글)**
-    <text size="sm" color="secondary">어떤 게시글에 대한 대화인지 구분</text>
-  </box>
-  <text color="secondary" size="sm">채팅 메시지는 작성자와 관련 게시글 ID를 함께 저장합니다.</text>
-</box>
+실제 이미지 파일은 Storage의 `lost-item-images` 버킷에 저장하고, 데이터베이스에는 해당 파일의 경로만 저장하는 방식입니다.
 
-예를 들어 게시글 1번에 사용자 A와 사용자 B가 메시지를 남기면 다음과 같습니다.
-
-| id | item_id | user_id | message |
-|---|---|---|---|
-| 1 | 1 | UUID-A | 안녕하세요. 지갑을 확인하고 싶습니다. |
-| 2 | 1 | UUID-B | 네, 연락 주셔서 감사합니다. |
-
-현재 프로젝트의 `chats` 테이블은 게시글 ID를 기준으로 메시지를 구분합니다. 별도의 채팅방 ID나 수신자 ID는 없다는 점을 기억해 주세요.
 
 ## 3-3. 각 테이블의 컬럼 자세히 알아보기
 
