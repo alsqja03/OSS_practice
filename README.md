@@ -171,7 +171,7 @@ Supabase Dashboard에서 다음 항목을 확인합니다.
 
 1. **Authentication → URL Configuration**
    - Site URL: `http://localhost:8501`
-   - Redirect URLs: `http://localhost:8501/**`
+   - Redirect URLs: `http://localhost:8501/`
 2. **Authentication → Providers**
    - Email Provider를 활성화합니다.
    - Google 또는 GitHub 로그인을 사용할 경우 각 Provider를 활성화하고 OAuth Client 정보도 설정합니다.
