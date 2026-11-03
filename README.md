@@ -85,7 +85,9 @@ cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 Copy-Item .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
-`.streamlit/secrets.toml`에 팀에서 전달받은 값을 입력합니다.
+`.streamlit/secrets.toml`에 팀에게 전달받거나 또는 아래 문서를 참고해 값을 입력합니다.
+- [DB/database.md](DB/database.md): Supabase 프로젝트, 테이블, RLS, Storage, Authentication 설정
+- [DB/DB_use_guide.md](DB/DB_use_guide.md): Python 코드에서 Supabase DB를 사용하는 방법
 
 ```toml
 SUPABASE_URL = "https://<project-ref>.supabase.co"
