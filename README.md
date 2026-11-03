@@ -95,6 +95,9 @@ streamlit run main.py
 ```
 
 브라우저에서 http://localhost:8501 이 열리면 정상입니다. (자동으로 열리지 않으면 주소를 직접 입력하세요.)
+```bash
+python -m streamlit run main.py --server.port 8501
+```
 
 ## 사용법 (데모 순서)
 
